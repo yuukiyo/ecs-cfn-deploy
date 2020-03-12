@@ -1,0 +1,413 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "ECS CFn Test"
+Parameters:
+  env:
+    Type: "String"
+    Description: "The environment name. e.g. Dev, Test, or Production"
+    Default: "NONE"
+Resources:
+  EcsCfnTestVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: !Sub "EcsCfnTestVpc-${env}"
+  EcsCfnTestVpcPublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.0.0/18
+      VpcId:
+        Ref: EcsCfnTestVpc
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "EcsCfnTestVpcPublicSubnet1-${env}"
+  EcsCfnTestVpcPublicSubnet1RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: EcsCfnTestVpc
+  EcsCfnTestVpcPublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: EcsCfnTestVpcPublicSubnet1RouteTable
+      SubnetId:
+        Ref: EcsCfnTestVpcPublicSubnet1
+  EcsCfnTestVpcPublicSubnet1DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: EcsCfnTestVpcPublicSubnet1RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: EcsCfnTestVpcIGW
+    DependsOn:
+      - EcsCfnTestVpcGW
+  EcsCfnTestVpcIGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "EcsCfnTestVpcIGW-${env}"
+  EcsCfnTestVpcGW:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: EcsCfnTestVpc
+      InternetGatewayId:
+        Ref: EcsCfnTestVpcIGW
+  EcsCfnTestVpcPublicSubnet1EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  EcsCfnTestVpcPublicSubnet1NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - EcsCfnTestVpcPublicSubnet1EIP
+          - AllocationId
+      SubnetId:
+        Ref: EcsCfnTestVpcPublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub "EcsCfnTestVpcPublicSubnet1NATGateway-${env}"
+  EcsCfnTestVpcPublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.64.0/18
+      VpcId:
+        Ref: EcsCfnTestVpc
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "EcsCfnTestVpcPublicSubnet2-${env}"
+  EcsCfnTestVpcPublicSubnet2RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: EcsCfnTestVpc
+      Tags:
+        - Key: Name
+          Value: !Sub "EcsCfnTestVpcPublicSubnet2RouteTable-${env}"
+  EcsCfnTestVpcPublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: EcsCfnTestVpcPublicSubnet2RouteTable
+      SubnetId:
+        Ref: EcsCfnTestVpcPublicSubnet2
+  EcsCfnTestVpcPublicSubnet2DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: EcsCfnTestVpcPublicSubnet2RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: EcsCfnTestVpcIGW
+    DependsOn:
+      - EcsCfnTestVpcGW
+  EcsCfnTestVpcPublicSubnet2EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  EcsCfnTestVpcPublicSubnet2NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - EcsCfnTestVpcPublicSubnet2EIP
+          - AllocationId
+      SubnetId:
+        Ref: EcsCfnTestVpcPublicSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub "EcsCfnTestVpcPublicSubnet2NATGateway-${env}"
+  EcsCfnTestVpcPrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.128.0/18
+      VpcId:
+        Ref: EcsCfnTestVpc
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "EcsCfnTestVpcPrivateSubnet1-${env}"
+  EcsCfnTestVpcPrivateSubnet1RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: EcsCfnTestVpc
+      Tags:
+        - Key: Name
+          Value: !Sub "EcsCfnTestVpcPrivateSubnet1RouteTable-${env}"
+  EcsCfnTestVpcPrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: EcsCfnTestVpcPrivateSubnet1RouteTable
+      SubnetId:
+        Ref: EcsCfnTestVpcPrivateSubnet1
+  EcsCfnTestVpcPrivateSubnet1DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: EcsCfnTestVpcPrivateSubnet1RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: EcsCfnTestVpcPublicSubnet1NATGateway
+  EcsCfnTestVpcPrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.192.0/18
+      VpcId:
+        Ref: EcsCfnTestVpc
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "EcsCfnTestVpcPrivateSubnet2-${env}"
+  EcsCfnTestVpcPrivateSubnet2RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: EcsCfnTestVpc
+      Tags:
+        - Key: Name
+          Value: !Sub "EcsCfnTestVpcPrivateSubnet2RouteTable-${env}"
+  EcsCfnTestVpcPrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: EcsCfnTestVpcPrivateSubnet2RouteTable
+      SubnetId:
+        Ref: EcsCfnTestVpcPrivateSubnet2
+  EcsCfnTestVpcPrivateSubnet2DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: EcsCfnTestVpcPrivateSubnet2RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: EcsCfnTestVpcPublicSubnet2NATGateway
+  EcsCfnTestCluster:
+    Type: AWS::ECS::Cluster
+  EcsCfnTestFargateServiceLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      SecurityGroups:
+        - Fn::GetAtt:
+            - EcsCfnTestFargateServiceLBSecurityGroup
+            - GroupId
+      Subnets:
+        - Ref: EcsCfnTestVpcPublicSubnet1
+        - Ref: EcsCfnTestVpcPublicSubnet2
+      Type: application
+    DependsOn:
+      - EcsCfnTestVpcPublicSubnet1DefaultRoute
+      - EcsCfnTestVpcPublicSubnet2DefaultRoute
+  EcsCfnTestFargateServiceLBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: EcsCfnTestFargateServiceLBSecurityGroup
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow from anyone on port 80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+      VpcId:
+        Ref: EcsCfnTestVpc
+  EcsCfnTestFargateServiceLBSecurityGroupEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Fn::GetAtt:
+          - EcsCfnTestFargateServiceLBSecurityGroup
+          - GroupId
+      IpProtocol: tcp
+      Description: Load balancer to target
+      DestinationSecurityGroupId:
+        Fn::GetAtt:
+          - EcsCfnTestFargateServiceSecurityGroup
+          - GroupId
+      FromPort: 5000
+      ToPort: 5000
+  EcsCfnTestFargateServiceLBPublicListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn:
+            Ref: EcsCfnTestFargateServiceLBPublicListenerECSGroup
+          Type: forward
+      LoadBalancerArn:
+        Ref: EcsCfnTestFargateServiceLB
+      Port: 80
+      Protocol: HTTP
+  EcsCfnTestFargateServiceLBPublicListenerECSGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPort: "5000"
+      HealthCheckPath: "/"
+      HealthCheckProtocol: "HTTP"
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 3
+      Port: 80
+      Protocol: HTTP
+      TargetType: ip
+      VpcId:
+        Ref: EcsCfnTestVpc
+  EcsCfnTestFargateServiceTaskDefTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: "2012-10-17"
+  EcsCfnTestFargateServiceTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Essential: true
+          Image: yuukiyo/k8s-sample-backend:d6ec2a00d5afe136c0c0bb3dd78dda46f0bd5c2b
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group:
+                Ref: EcsCfnTestFargateServiceTaskDefwebLogGroup
+              awslogs-stream-prefix: MyFargateService
+              awslogs-region:
+                Ref: AWS::Region
+          Name: web
+          PortMappings:
+            - ContainerPort: 5000
+              Protocol: tcp
+      Cpu: "512"
+      ExecutionRoleArn:
+        Fn::GetAtt:
+          - EcsCfnTestFargateServiceTaskDefExecutionRole
+          - Arn
+      Memory: "2048"
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      TaskRoleArn:
+        Fn::GetAtt:
+          - EcsCfnTestFargateServiceTaskDefTaskRole
+          - Arn
+  EcsCfnTestFargateServiceTaskDefwebLogGroup:
+    Type: AWS::Logs::LogGroup
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+  EcsCfnTestFargateServiceTaskDefExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: "2012-10-17"
+  EcsCfnTestFargateServiceTaskDefExecutionRoleDefaultPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - EcsCfnTestFargateServiceTaskDefwebLogGroup
+                - Arn
+        Version: "2012-10-17"
+      PolicyName: EcsCfnTestFargateServiceTaskDefExecutionRoleDefaultPolicy
+      Roles:
+        - Ref: EcsCfnTestFargateServiceTaskDefExecutionRole
+  EcsCfnTestFargateService:
+    Type: AWS::ECS::Service
+    Properties:
+      TaskDefinition:
+        Ref: EcsCfnTestFargateServiceTaskDef
+      Cluster:
+        Ref: EcsCfnTestCluster
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 50
+      DesiredCount: 6
+      EnableECSManagedTags: false
+      HealthCheckGracePeriodSeconds: 60
+      LaunchType: FARGATE
+      LoadBalancers:
+        - ContainerName: web
+          ContainerPort: 5000
+          TargetGroupArn:
+            Ref: EcsCfnTestFargateServiceLBPublicListenerECSGroup
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - Fn::GetAtt:
+                - EcsCfnTestFargateServiceSecurityGroup
+                - GroupId
+          Subnets:
+            - Ref: EcsCfnTestVpcPrivateSubnet1
+            - Ref: EcsCfnTestVpcPrivateSubnet2
+    DependsOn:
+      - EcsCfnTestFargateServiceLBPublicListenerECSGroup
+      - EcsCfnTestFargateServiceLBPublicListener
+  EcsCfnTestFargateServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: CdkFargateStack/MyFargateService/Service/SecurityGroup
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      VpcId:
+        Ref: EcsCfnTestVpc
+  EcsCfnTestFargateServiceSecurityGroupfromLBSecurityGroup:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: Load balancer to target
+      FromPort: 5000
+      GroupId:
+        Fn::GetAtt:
+          - EcsCfnTestFargateServiceSecurityGroup
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - EcsCfnTestFargateServiceLBSecurityGroup
+          - GroupId
+      ToPort: 5000
